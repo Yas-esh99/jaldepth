@@ -4,7 +4,7 @@ A small, self-contained computer-vision demo: give it a photo or a short video o
 
 It is the vision module of **JalDrishti**, our Smart India Hackathon 2026 project (PS SIH26085, *Urban Flood Nowcasting System — Drainage and Rainfall Coupling*), packaged on its own so it can be shown and tried in one click.
 
-**Live app:** _(Streamlit Community Cloud link — see Deploy below)_
+**Run it:** locally in one command (below), or deploy to Streamlit Community Cloud in three clicks (see Deploy). Vercel cannot host PyTorch/OpenCV inference.
 
 ## What it does
 
@@ -16,7 +16,7 @@ It is the vision module of **JalDrishti**, our Smart India Hackathon 2026 projec
 | **Depth, exact** | Mark a reference of known height (kerb ≈ 15 cm, pole bands, wall) with the sliders; the waterline on it is converted to centimetres. | Geometry |
 | **Flags** | *Person standing in water* · *Vehicle in wheel-deep water* | Rules |
 
-**Indian test set.** 40 freely licensed photos of flooded streets in Mumbai, Chennai, Vadodara, Ahmedabad and Bengaluru from Wikimedia Commons (`samples/`, credits in `samples/ATTRIBUTION.md`) plus a 2017 Mumbai flood video. The model finds water in 34 of the 38 photos (mean coverage 35%) and flags people and vehicles in water correctly on the Mumbai and Chennai scenes. There is no public street-level *Indian* flood segmentation dataset yet — the open Indian sets are satellite imagery — so we train on the global ATLANTIS set and validate on Indian streets; collecting and labelling an Indian street set is the next step.
+**Indian test set.** 38 freely licensed photos of flooded streets in Mumbai, Chennai, Vadodara, Ahmedabad and Bengaluru from Wikimedia Commons (`samples/`, credits in `samples/ATTRIBUTION.md`) plus a 2017 Mumbai flood video. The model finds water in 34 of the 38 photos (mean coverage 35%) and flags people and vehicles in water correctly on the Mumbai and Chennai scenes. There is no public street-level *Indian* flood segmentation dataset yet — the open Indian sets are satellite imagery — so we train on the global ATLANTIS set and validate on Indian streets; collecting and labelling an Indian street set is the next step.
 
 ## Run locally
 

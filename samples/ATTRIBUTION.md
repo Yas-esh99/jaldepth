@@ -7,8 +7,6 @@ All samples are freely licensed; credit and licence per file (video re-encoded t
 | A_Santro_that_went_off_road_35520266_jpg.jpg | File:A Santro that went "off road" (35520266).jpg | Rakesh from Bangalore | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:A_Santro_that_went_%22off_road%22_(35520266).jpg |
 | Aadhaar_Bangalore_flood_jpg.jpg | File:Aadhaar Bangalore flood.jpg | Shyamal | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Aadhaar_Bangalore_flood.jpg |
 | Army_flood_relief_and_rescue_operations_in_Chennai_on_Novemb.jpg | File:Army flood relief and rescue operations, in Chennai on November 17, 2015.jpg | Ministry of Defence | GODL-India | https://commons.wikimedia.org/wiki/File:Army_flood_relief_and_rescue_operations,_in_Chennai_on_November_17,_2015.jpg |
-| Army_flood_relief_and_rescue_operations_in_Chennai_on_Novemb.jpg | File:Army flood relief and rescue operations, in Chennai on November 17, 2015 (2).jpg | Ministry of Defence | GODL-India | https://commons.wikimedia.org/wiki/File:Army_flood_relief_and_rescue_operations,_in_Chennai_on_November_17,_2015_(2).jpg |
-| Aug_29_2017_Mumbai_Floods_webm.org&utm_campaign=imageinfo&utm_content=original | File:Aug 29 2017 Mumbai Floods.webm | usernamesoldout | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:Aug_29_2017_Mumbai_Floods.webm |
 | Bangalore_monsoon_jpg.jpg | File:Bangalore monsoon.jpg | Thejas | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Bangalore_monsoon.jpg |
 | Bombay_flooded_street_jpg.jpg | File:Bombay flooded street.jpg |  | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Bombay_flooded_street.jpg |
 | Bombay_flooded_street2_jpg.jpg | File:Bombay flooded street2.jpg |  | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Bombay_flooded_street2.jpg |
@@ -44,3 +42,4 @@ All samples are freely licensed; credit and licence per file (video re-encoded t
 | Inundation_of_Chennai_in_2017_6_jpg.jpg | File:Inundation of Chennai in 2017-6.jpg | Kaitha Poo Manam | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Inundation_of_Chennai_in_2017-6.jpg |
 | Inundation_of_Chennai_in_2017_7_jpg.jpg | File:Inundation of Chennai in 2017-7.jpg | Kaitha Poo Manam | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Inundation_of_Chennai_in_2017-7.jpg |
 | Rain_in_india_panoramio_jpg.jpg | File:Rain in india - panoramio.jpg | Indian9 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Rain_in_india_-_panoramio.jpg |
+| Mumbai_floods_2017_video.mp4 | File:Aug 29 2017 Mumbai Floods.webm | Wikimedia Commons contributor (see source) | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:Aug_29_2017_Mumbai_Floods.webm |
