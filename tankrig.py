@@ -94,3 +94,79 @@ def draw_tank(img, res):
         c = res["car"]; bx0, by0, bx1, by1 = [int(v) for v in c["bbox"]]; cv2.rectangle(vis, (bx0, by0), (bx1, by1), (60, 220, 255), 2)
         cv2.putText(vis, f'car {c["conf"]:.2f} · {c["submerged_fraction"]*100:.0f}% submerged · water at {c["part"]}', (bx0, max(50, by0 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (60, 220, 255), 2)
     return vis
+
+
+# ───────────────────────── Plastic box rig (translucent box, tiny toy car, no ruler) ─────────────────────────
+from collections import deque
+_box_hist = deque(maxlen=7)
+
+def box_waterline(img, strip, y_floor, y_rim, mode="tint", ref=None, hsv_lo=(85, 40, 40), hsv_hi=(135, 255, 255), min_frac=0.45):
+    """Find the water surface on the front wall inside a horizontal strip (x0..x1) between rim and floor.
+    'tint': rows are water when most columns fall in the blue-tint HSV range (food colouring).
+    'ref' : rows are water when they differ from an empty-box reference frame. Returns (y_water, row_profile, solidity)."""
+    x0, x1 = int(strip[0]), int(strip[1]); y_top, y_bot = int(min(y_rim, y_floor)), int(max(y_rim, y_floor))
+    band = img[y_top:y_bot, x0:x1]
+    if mode == "ref" and ref is not None:
+        rb = ref[y_top:y_bot, x0:x1]; diff = np.abs(band.astype(np.int16) - rb.astype(np.int16)).sum(axis=2); wet = diff > 60
+    else:
+        hsv = cv2.cvtColor(band, cv2.COLOR_BGR2HSV); wet = cv2.inRange(hsv, np.array(hsv_lo, np.uint8), np.array(hsv_hi, np.uint8)) > 0
+    prof = wet.mean(axis=1)                             # fraction of 'water' columns per row, top->bottom
+    prof_s = cv2.GaussianBlur(prof.reshape(-1, 1).astype(np.float32), (1, 7), 0).ravel()
+    # walk up from the floor while rows are wet (allow small gaps: ripples, car body)
+    rows = prof_s[::-1]; y = 0; gap = 0
+    for i, fr in enumerate(rows):
+        if fr >= min_frac: y = i + 1; gap = 0
+        else:
+            gap += 1
+            if gap > 6: break
+    solidity = float(rows[:y].mean()) if y else 0.0
+    return y_bot - y, prof_s, solidity
+
+# JalDrishti demo-model classes (kerb = 15 cm real, tyre = 60 cm real), from the team's build guide
+BOX_CLASSES = [("Dry", 2, "Kerb fully visible, road is dry", "No action — monitor only", (46, 139, 87)),
+               ("Ankle-deep", 15, "Water covers part of the kerb (< 15 cm)", "Pre-alert, monitor closely", (48, 194, 242)),
+               ("Knee-deep", 60, "Kerb not visible, tyre partly submerged (15–60 cm)", "Alert · deploy pump · advise caution", (31, 123, 224)),
+               ("Wheel-deep", 1e9, "Tyre fully submerged (> 60 cm)", "Close road · diversions · strong alert", (43, 57, 192))]
+def box_class(real_cm):
+    for name, upper, desc, action, col in BOX_CLASSES:
+        if real_cm < upper: return name, desc, action, col
+    return BOX_CLASSES[-1][0], BOX_CLASSES[-1][2], BOX_CLASSES[-1][3], BOX_CLASSES[-1][4]
+
+def analyze_box(img, strip, y_floor, y_kerb_top, kerb_real_cm=15.0, mode="tint", ref=None, tyre_real_cm=60.0, kerb_model_cm=None, hsv_lo=(85, 40, 40), hsv_hi=(135, 255, 255), min_frac=0.45, smooth=True, y_top=None):
+    """Depth from the waterline on the wall/kerb face between the floor line and the top of the search band.
+    Scale: the kerb's pixel height stands for kerb_real_cm (15 cm) — no ruler needed. Real depth -> demo classes (kerb / tyre)."""
+    y_search_top = int(y_top) if y_top is not None else int(y_kerb_top - 3.0 * (y_floor - y_kerb_top))   # allow water well above the kerb (up to ~60 cm real)
+    yw, prof, sol = box_waterline(img, strip, y_floor, max(0, y_search_top), mode, ref, hsv_lo, hsv_hi, min_frac)
+    ppc_real = (y_floor - y_kerb_top) / max(1e-6, kerb_real_cm); real = max(0.0, (y_floor - yw) / ppc_real)
+    if smooth:
+        _box_hist.append(real); real = float(np.median(_box_hist))
+    name, desc, action, col = box_class(real)
+    model_cm = round(real * kerb_model_cm / kerb_real_cm, 1) if kerb_model_cm else None
+    kerb_frac = float(np.clip(real / kerb_real_cm, 0, 1)); tyre_frac = float(np.clip(real / tyre_real_cm, 0, 1))
+    conf = round(float(np.clip(0.35 + 0.6 * sol, 0.35, 0.95)) if real > 1 else 0.9, 2)
+    return {"y_surface": int(yw), "real_cm": round(real, 0), "model_cm": model_cm, "class": name, "description": desc, "action": action, "confidence": conf,
+            "method": f"waterline on the kerb/wall ({'blue tint' if mode == 'tint' else 'reference frame'}) · scale: kerb = {kerb_real_cm:g} cm real",
+            "px_per_real_cm": round(ppc_real, 3), "y_floor": int(y_floor), "y_kerb_top": int(y_kerb_top), "y_search_top": int(max(0, y_search_top)), "strip": [int(strip[0]), int(strip[1])],
+            "kerb_submerged": round(kerb_frac, 2), "tyre_submerged": round(tyre_frac, 2), "depth_cm": round(real, 0), "profile": prof.tolist()}
+
+def draw_box(img, res, kerb_real_cm=15.0):
+    vis = img.copy(); x0, x1 = res["strip"]; yf, yk, yt, yw = res["y_floor"], res["y_kerb_top"], res["y_search_top"], res["y_surface"]
+    cv2.rectangle(vis, (x0, yt), (x1, yf), (255, 255, 255), 1)
+    cv2.line(vis, (x0, yf), (x1, yf), (80, 220, 80), 2); cv2.putText(vis, "road / floor = 0", (x0 + 6, yf + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (80, 220, 80), 2)
+    cv2.line(vis, (x0, yk), (x1, yk), (80, 220, 80), 2); cv2.putText(vis, f"kerb top = {kerb_real_cm:g} cm", (x0 + 6, yk - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (80, 220, 80), 2)
+    ppc = res["px_per_real_cm"]
+    for cm in (15, 30, 45, 60):
+        yy = int(yf - cm * ppc)
+        if yy > yt: cv2.line(vis, (x1 - 30, yy), (x1, yy), (80, 220, 80), 1); cv2.putText(vis, f"{cm}", (x1 - 60, yy + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (80, 220, 80), 1)
+    name, desc, action, col = box_class(res["real_cm"])
+    if res["real_cm"] > 1:
+        cv2.line(vis, (x0, yw), (x1, yw), (0, 140, 255), 3); cv2.putText(vis, f'{res["real_cm"]:.0f} cm', (x0 + 6, yw - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 140, 255), 2)
+    cv2.rectangle(vis, (0, 0), (vis.shape[1], 62), (27, 58, 107), -1)
+    cv2.putText(vis, f'WATER LEVEL: {name.upper()}  ·  {res["real_cm"]:.0f} cm real  ·  conf {res["confidence"]:.2f}', (10, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.75, col, 2)
+    cv2.putText(vis, f'{desc}  →  {action}', (10, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+    return vis
+
+_ref = {"frame": None, "capture": False}
+def maybe_capture_ref(img):
+    if _ref.get("capture"): _ref["frame"] = img.copy(); _ref["capture"] = False
+    return _ref.get("frame")
