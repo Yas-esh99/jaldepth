@@ -18,12 +18,16 @@ st.caption("Computer-vision module of **JalDrishti** (SIH 2026, PS SIH26085). A 
 with st.sidebar:
     st.header("Input")
     src = st.radio("Image source", ["Indian sample photos (Wikimedia Commons)", "Upload a photo", "Upload a short video", "Live camera — snapshot", "Live camera — continuous"], index=0)
+    scene_lbl = st.radio("Scene", ["Real street / CCTV (India)", "Table-top rig (tray + toy car)"], index=0, help="Rig mode scales all size references to a toy car and also picks up blue-tinted water.")
+    scene = "street" if scene_lbl.startswith("Real") else "rig"
+    toy_len = st.number_input("Toy car length (cm)", 2.0, 30.0, 7.0, 0.5) if scene == "rig" else 7.0
     conf_seg = st.slider("Water model confidence", 0.05, 0.8, 0.25, 0.05); conf_det = st.slider("Object detector confidence", 0.1, 0.8, 0.3, 0.05)
     st.divider(); st.header("Ruler (optional)")
-    st.caption("If a kerb, pole or wall of known height is visible, mark it to read an exact depth.")
+    st.caption("If a kerb, pole or wall of known height is visible, mark it to read an exact depth. In rig mode enter the REAL height it stands for (e.g. a 3 cm block = 15 cm kerb).")
     use_ruler = st.checkbox("Use a reference ruler", value=False)
     rx = st.slider("Ruler x (px)", 0, 1280, 640); ryb = st.slider("Ruler base y (px)", 0, 720, 600); ryt = st.slider("Ruler top y (px)", 0, 720, 400); rh = st.number_input("Ruler height (cm)", 5.0, 500.0, 100.0, 5.0)
-    st.divider(); st.markdown(f"**Model card** · YOLOv8n-seg fine-tuned on ATLANTIS ({metrics['train_images']} train imgs) · test mask mAP50 **{metrics['test_mask_mAP50']:.2f}** · YOLOv8n COCO for objects")
+    st.divider(); st.markdown("**Depth is always estimated**, in this order of trust: ruler → known-size objects standing in water (people, cars, bikes, hydrants…) → scene estimate from how much of the frame is water. The card shows which method and how confident.")
+    st.markdown(f"**Model card** · YOLOv8n-seg fine-tuned on ATLANTIS ({metrics['train_images']} train imgs) · test mask mAP50 **{metrics['test_mask_mAP50']:.2f}** · YOLOv8n COCO for objects")
 
 def to_bgr(pil): return cv2.cvtColor(np.array(pil.convert("RGB")), cv2.COLOR_RGB2BGR)
 def fit(img, w=1280):
@@ -52,12 +56,7 @@ elif src == "Live camera — continuous":
         live_ruler = {"x": int(rx), "y_bottom": int(ryb), "y_top": int(ryt), "height_cm": float(rh)} if use_ruler else None
         def _cb(frame):
             im = frame.to_ndarray(format="bgr24"); im = fit(im)
-            res, m = jd.analyze_image(im, live_ruler, conf_seg, conf_det); vis = jd.draw(im, m, res, live_ruler)
-            wf = res["water_fraction"] * 100; txt = f"water {wf:.0f}%"
-            if res.get("vehicle_depth_cm") is not None: txt += f"  ·  ~{res['vehicle_depth_cm']:.0f} cm {res['vehicle_class']}"
-            if "ruler" in res: txt += f"  ·  ruler {res['ruler']['depth_cm']:.0f} cm {res['ruler']['class']}"
-            if res["flags"]: txt += "  ·  ⚠ " + "; ".join(res["flags"])
-            cv2.rectangle(vis, (0, 0), (vis.shape[1], 30), (27, 58, 107), -1); cv2.putText(vis, txt, (10, 21), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+            res, m = jd.analyze_image(im, live_ruler, conf_seg, conf_det, scene, toy_len); vis = jd.draw(im, m, res, live_ruler)
             return _av.VideoFrame.from_ndarray(vis, format="bgr24")
         webrtc_streamer(key="jaldepth-live", mode=WebRtcMode.SENDRECV, video_frame_callback=_cb, media_stream_constraints={"video": {"width": {"ideal": 1280}}, "audio": False},
                         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}, async_processing=True)
@@ -76,36 +75,32 @@ else:
             for k in range(0, n, int(fps)):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, k); ok, fr = cap.read()
                 if not ok: break
-                res, m = jd.analyze_image(fit(fr), None, conf_seg, conf_det)
-                rows.append({"t (s)": round(k / fps, 1), "water %": round(res["water_fraction"] * 100), "people": sum(d["name"] == "person" for d in res["detections"]), "vehicles": sum(d["name"] in jd.VEHICLES for d in res["detections"]), "vehicle depth (cm)": res.get("vehicle_depth_cm"), "flags": ", ".join(res["flags"])})
+                res, m = jd.analyze_image(fit(fr), None, conf_seg, conf_det, scene, toy_len)
+                rows.append({"t (s)": round(k / fps, 1), "water %": round(res["water_fraction"] * 100), "people": sum(d["name"] == "person" for d in res["detections"]), "vehicles": sum(d["name"] in jd.VEHICLES for d in res["detections"]), "depth (cm)": res["depth"]["real_cm"], "class": res["depth"]["class"], "confidence": res["depth"]["confidence"], "flags": ", ".join(res["flags"])})
                 prog.progress(min(1.0, (k + fps) / n))
             st.dataframe(rows, width='stretch')
 
 if img is not None:
     ruler = {"x": int(rx * img.shape[1] / 1280), "y_bottom": int(ryb * img.shape[0] / 720), "y_top": int(ryt * img.shape[0] / 720), "height_cm": float(rh)} if use_ruler else None
     with st.spinner("Running water segmentation + detection…"):
-        res, mask = jd.analyze_image(img, ruler, conf_seg, conf_det); vis = jd.draw(img, mask, res, ruler)
+        res, mask = jd.analyze_image(img, ruler, conf_seg, conf_det, scene, toy_len); vis = jd.draw(img, mask, res, ruler)
     c1, c2 = st.columns([3, 2])
     with c1:
         st.image(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB), caption=caption, width='stretch')
     with c2:
+        dp = res["depth"]; name, col = jd.depth_class(dp["real_cm"]); hexc = "#%02x%02x%02x" % (col[2], col[1], col[0])
+        st.markdown(f'<div class="card"><div class="lbl">Estimated water depth</div><p class="big" style="color:{hexc}">{dp["real_cm"]:.0f} cm · {name}</p><div class="lbl" style="text-transform:none">method: {dp["method"]} · confidence {dp["confidence"]:.2f}</div></div>', unsafe_allow_html=True); st.write("")
         wf = res["water_fraction"] * 100
         st.markdown(f'<div class="card"><div class="lbl">Water coverage (segmentation model)</div><p class="big">{wf:.0f}%</p></div>', unsafe_allow_html=True); st.write("")
-        if res.get("vehicle_depth_cm") is not None:
-            name, col = jd.depth_class(res["vehicle_depth_cm"]); hexc = "#%02x%02x%02x" % (col[2], col[1], col[0])
-            st.markdown(f'<div class="card"><div class="lbl">Estimated depth from submerged vehicles (coarse)</div><p class="big" style="color:{hexc}">{res["vehicle_depth_cm"]:.0f} cm · {name}</p><div class="lbl" style="text-transform:none">uses typical vehicle heights (car 150 cm) — indicative only</div></div>', unsafe_allow_html=True); st.write("")
-        if "ruler" in res:
-            r = res["ruler"]; name, col = jd.depth_class(r["depth_cm"]); hexc = "#%02x%02x%02x" % (col[2], col[1], col[0])
-            st.markdown(f'<div class="card"><div class="lbl">Depth at the ruler</div><p class="big" style="color:{hexc}">{r["depth_cm"]:.0f} cm · {name}</p><div class="lbl" style="text-transform:none">waterline solidity {r["solidity"]}</div></div>', unsafe_allow_html=True); st.write("")
         n_p = sum(d["name"] == "person" for d in res["detections"]); n_v = sum(d["name"] in jd.VEHICLES for d in res["detections"]); n_w = sum(d["in_water"] for d in res["detections"])
-        st.markdown(f'<div class="card"><div class="lbl">Objects</div><b>{n_p}</b> people · <b>{n_v}</b> vehicles · <b>{n_w}</b> standing in water</div>', unsafe_allow_html=True); st.write("")
+        st.markdown(f'<div class="card"><div class="lbl">Reference objects</div><b>{n_p}</b> people · <b>{n_v}</b> vehicles · <b>{n_w}</b> standing in water (used for depth)</div>', unsafe_allow_html=True); st.write("")
         for f in res["flags"]: st.markdown(f'<div class="flag">⚠ {f}</div>', unsafe_allow_html=True)
         if not res["flags"]: st.caption("No emergency flags.")
     with st.expander("How it works"):
         st.markdown(f"""
 1. **Water segmentation** — a YOLOv8n-seg network we fine-tuned on **ATLANTIS** (Erfani et al. 2022; 5,195 Creative-Commons photos, 17 waterbody labels merged into *water*). Test mask mAP50 = {metrics['test_mask_mAP50']:.2f}, mAP50-95 = {metrics['test_mask_mAP50_95']:.2f}. Blue overlay = water.
 2. **Object detection** — pretrained YOLOv8n (COCO) finds people, cars, buses, trucks, motorcycles. A box whose base lies inside the water mask is *standing in water*.
-3. **Depth** — two ways. *Coarse:* the fraction of a vehicle hidden below the waterline × its typical height. *Exact:* mark a reference of known height (kerb ≈ 15 cm, pole bands, wall) and the waterline on it is converted to centimetres.
+3. **Depth — always estimated**, most trusted first: (a) a **ruler** you mark (kerb ≈ 15 cm, pole bands, wall) → exact centimetres; (b) **known-size objects standing in water** — a person is ~170 cm, a car ~150 cm tall: the part hidden below the waterline (expected height − visible height, scale from the object's width) gives the depth, combined across objects; (c) a **scene estimate** from how much of the lower frame is water when nothing else is in view (low confidence). In **rig mode** every size is scaled to the toy car you enter, so a tray with a 7 cm car behaves like a street.
 4. **Classes** — Dry < 5 cm · Ankle 5–20 · Knee 20–50 · Wheel > 50 cm. Classes, not false precision: that is what a driver or a control room needs.
 
 Limits: night, glare and muddy reflections lower the mask quality; depth without a ruler is indicative. In JalDrishti this module runs on existing CCTV and feeds a self-correcting flood nowcast.
