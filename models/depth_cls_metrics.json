@@ -1,0 +1,9 @@
+{
+ "n_train": 234,
+ "n_val": 59,
+ "top1_val": 0.763,
+ "within_one_class_val": 0.966,
+ "top1_ultralytics": 0.763,
+ "minutes": 2.7,
+ "labels": "hand-labelled by eye (class only)"
+}

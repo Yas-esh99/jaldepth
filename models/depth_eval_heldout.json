@@ -1,0 +1,6 @@
+{
+ "n": 59,
+ "exact": 0.678,
+ "within_one": 0.898,
+ "note": "combined estimator (ruler > objects > learned classifier) on the classifier's held-out split"
+}

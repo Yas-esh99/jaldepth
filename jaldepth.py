@@ -4,7 +4,7 @@ Scenes: 'street' (real CCTV / photos) or 'rig' (table-top tray with a toy car, t
 import os, json
 import numpy as np, cv2
 HERE = os.path.dirname(os.path.abspath(__file__))
-WATER_W = os.path.join(HERE, "models", "yolov8n-seg-water.pt"); WATER_IN_W = os.path.join(HERE, "models", "yolov8n-seg-water-in.pt"); DET_W = os.path.join(HERE, "models", "yolov8n.pt")
+WATER_W = os.path.join(HERE, "models", "yolov8n-seg-water.pt"); CLS_W = os.path.join(HERE, "models", "yolov8n-cls-depth.pt"); WATER_IN_W = os.path.join(HERE, "models", "yolov8n-seg-water-in.pt"); DET_W = os.path.join(HERE, "models", "yolov8n.pt")
 CLASSES = [("Dry", 5, (46, 139, 87)), ("Ankle-deep", 20, (48, 194, 242)), ("Knee-deep", 50, (31, 123, 224)), ("Wheel-deep", 1e9, (43, 57, 192))]
 # typical real-world sizes in cm: (height, width when seen frontally, length when seen from the side)
 REF = {"person": (170, 45, 45), "car": (150, 180, 450), "truck": (300, 250, 800), "bus": (320, 250, 1200), "motorcycle": (110, 60, 210), "bicycle": (100, 45, 175),
@@ -23,6 +23,7 @@ def load_models():
         from ultralytics import YOLO
         _models["water"] = YOLO(WATER_W); _models["det"] = YOLO(DET_W)
         _models["water_in"] = YOLO(WATER_IN_W) if os.path.exists(WATER_IN_W) else None   # stage 2: self-trained on Indian footage
+        _models["cls"] = YOLO(CLS_W) if os.path.exists(CLS_W) else None                    # depth-class classifier trained on hand-labelled flood photos
     return _models
 
 def _mask_from(model, img, conf):
@@ -118,6 +119,14 @@ def scene_depth(mask, scale=1.0):
     cm = float(np.interp(score, [0, 0.05, 0.4, 0.9], [0, 3, 8, 15])) * scale
     return cm
 
+CLS_CM = {"dry": 2.0, "ankle": 12.0, "knee": 35.0, "wheel": 70.0}
+CLS_NAME = {"dry": "Dry", "ankle": "Ankle-deep", "knee": "Knee-deep", "wheel": "Wheel-deep"}
+def classify_depth(img):
+    """Scene-level depth class from the learned classifier (trained on ~300 hand-labelled Indian flood photos). Returns (class, prob) or None."""
+    m = load_models().get("cls")
+    if m is None: return None
+    r = m.predict(img, verbose=False, imgsz=320)[0]; i = int(r.probs.top1); return r.names[i], float(r.probs.top1conf)
+
 def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", toy_len_cm=7.0):
     scale = 1.0 if scene == "street" else toy_len_cm / REF["car"][2]         # rig: a 7 cm toy car stands for a 450 cm car
     mask = water_mask(img, conf_seg, tinted=(scene == "rig")); dets = detect(img, conf_det if scene == "street" else max(0.15, conf_det - 0.1))
@@ -140,7 +149,11 @@ def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", 
             depth = float(vals[order_][np.searchsorted(cum, 0.5)])                       # weighted median
             conf = 0.55 + 0.1 * min(3, len(refs) - 1); method = f"{len(refs)} known-size object(s) in water"
         else:
-            depth = scene_depth(mask, scale); conf = 0.3; method = "surface-water estimate, no reference in view (mark a kerb or wait for a person/vehicle for a real reading)"
+            cls = classify_depth(img) if scene == "street" else None
+            if cls and cls[1] >= 0.5:
+                depth = CLS_CM[cls[0]] * scale; conf = round(0.3 + 0.4 * cls[1], 2); method = f"learned scene classifier ({cls[1]:.0%} {CLS_NAME[cls[0]]}) — no reference object in view"
+            else:
+                depth = scene_depth(mask, scale); conf = 0.3; method = "surface-water estimate, no reference in view (mark a kerb or wait for a person/vehicle for a real reading)"
     real_cm = depth if ruler else (depth / scale if scale != 1.0 else depth)   # ruler height is entered in real-world cm
     out["depth"] = {"cm": round(depth, 1), "real_cm": round(real_cm, 1), "class": depth_class(real_cm)[0], "confidence": round(conf, 2), "method": method}
     flags = []
