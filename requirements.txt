@@ -8,3 +8,4 @@ torch
 torchvision
 streamlit-webrtc
 av
+transformers

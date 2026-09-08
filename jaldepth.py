@@ -32,6 +32,21 @@ def _mask_from(model, img, conf):
             if len(poly) >= 3: cv2.fillPoly(m, [poly.astype(np.int32)], 255)
     return m
 
+_seg = {}
+def ade_water_mask(img):
+    """Last-resort fallback: SegFormer-b0 pretrained on ADE20K (water/sea/river/lake/pool/waterfall classes). ~0.35 s on CPU."""
+    try:
+        if "m" not in _seg:
+            import torch
+            from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
+            mid = "nvidia/segformer-b0-finetuned-ade-512-512"; _seg["p"] = SegformerImageProcessor.from_pretrained(mid); _seg["m"] = SegformerForSemanticSegmentation.from_pretrained(mid).eval(); _seg["t"] = torch
+        torch = _seg["t"]; inp = _seg["p"](images=cv2.cvtColor(img, cv2.COLOR_BGR2RGB), return_tensors="pt")
+        with torch.no_grad(): out = _seg["m"](**inp).logits
+        lab = torch.nn.functional.interpolate(out, size=img.shape[:2], mode="bilinear", align_corners=False).argmax(1)[0].numpy()
+        return (np.isin(lab, [21, 26, 60, 109, 113, 128]).astype(np.uint8) * 255)
+    except Exception:
+        return None
+
 def water_mask(img, conf=0.25, tinted=False):
     """Indian-adapted model first; if it finds almost nothing, fall back to the ATLANTIS model (they miss different scenes)."""
     mods = load_models()
@@ -44,6 +59,9 @@ def water_mask(img, conf=0.25, tinted=False):
             cands.append(cv2.resize(_mask_from(mod, small, conf), (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST))
         best = max(cands, key=lambda c: (c > 0).mean()) if cands else m
         if (best > 0).mean() > (m > 0).mean(): m = best
+        if (m > 0).mean() < 0.03:
+            ade = ade_water_mask(img)                                                     # third opinion: ADE20K scene model
+            if ade is not None and (ade > 0).mean() > (m > 0).mean(): m = ade
     if tinted:   # table-top rig: union with a blue-tint mask (food colouring in the tray)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV); hm = cv2.inRange(hsv, np.array([85, 50, 40]), np.array([135, 255, 255]))
         k = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)); hm = cv2.morphologyEx(cv2.morphologyEx(hm, cv2.MORPH_OPEN, k), cv2.MORPH_CLOSE, k); m = cv2.bitwise_or(m, hm)
@@ -110,9 +128,17 @@ def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", 
     if ruler:
         r = ruler_depth(mask, **ruler); out["ruler"] = r; depth, conf, method = r["depth_cm"], min(0.95, 0.6 + 0.35 * r["solidity"]), "ruler (known-height reference)"
     else:
-        objs = [d["depth_cm"] for d in dets if d.get("depth_cm") is not None]
-        if objs:
-            depth = float(np.percentile(objs, 35)); conf = 0.55 + 0.1 * min(3, len(objs) - 1); method = f"{len(objs)} known-size object(s) in water"
+        # references: weight by detector confidence and apparent size; tiny/distant boxes carry no usable geometry
+        H_img = mask.shape[0]; refs = []
+        for d in dets:
+            if d.get("depth_cm") is None: continue
+            x0, y0, x1, y1 = d["bbox"]; hpx = y1 - y0
+            if hpx < 0.12 * H_img: continue
+            refs.append((d["depth_cm"], d["conf"] * (hpx / H_img) ** 0.5))
+        if refs:
+            vals = np.array([r[0] for r in refs]); wts = np.array([r[1] for r in refs]); order_ = np.argsort(vals); cum = np.cumsum(wts[order_]) / wts.sum()
+            depth = float(vals[order_][np.searchsorted(cum, 0.5)])                       # weighted median
+            conf = 0.55 + 0.1 * min(3, len(refs) - 1); method = f"{len(refs)} known-size object(s) in water"
         else:
             depth = scene_depth(mask, scale); conf = 0.3; method = "surface-water estimate, no reference in view (mark a kerb or wait for a person/vehicle for a real reading)"
     real_cm = depth if ruler else (depth / scale if scale != 1.0 else depth)   # ruler height is entered in real-world cm
