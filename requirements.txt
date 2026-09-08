@@ -6,3 +6,5 @@ pillow
 ultralytics>=8.2
 torch
 torchvision
+streamlit-webrtc
+av

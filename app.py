@@ -17,7 +17,7 @@ st.caption("Computer-vision module of **JalDrishti** (SIH 2026, PS SIH26085). A 
 
 with st.sidebar:
     st.header("Input")
-    src = st.radio("Image source", ["Indian sample photos (Wikimedia Commons)", "Upload a photo", "Upload a short video"], index=0)
+    src = st.radio("Image source", ["Indian sample photos (Wikimedia Commons)", "Upload a photo", "Upload a short video", "Live camera — snapshot", "Live camera — continuous"], index=0)
     conf_seg = st.slider("Water model confidence", 0.05, 0.8, 0.25, 0.05); conf_det = st.slider("Object detector confidence", 0.1, 0.8, 0.3, 0.05)
     st.divider(); st.header("Ruler (optional)")
     st.caption("If a kerb, pole or wall of known height is visible, mark it to read an exact depth.")
@@ -40,6 +40,30 @@ if src.startswith("Indian"):
 elif src == "Upload a photo":
     up = st.file_uploader("Photo of a flooded street", type=["jpg", "jpeg", "png"])
     if up: img = fit(to_bgr(Image.open(up))); caption = up.name
+elif src == "Live camera — snapshot":
+    st.caption("Uses your browser camera (works on phones too). Point it at water with a kerb or a person/vehicle in view and take a picture.")
+    shot = st.camera_input("Take a picture")
+    if shot: img = fit(to_bgr(Image.open(shot))); caption = "live camera snapshot"
+elif src == "Live camera — continuous":
+    st.caption("Continuous analysis of your webcam: the water mask, boxes and depth class are drawn on every frame. Best on a laptop; on hosted servers the video is relayed through the browser and may be slower.")
+    try:
+        from streamlit_webrtc import webrtc_streamer, WebRtcMode
+        import av as _av
+        live_ruler = {"x": int(rx), "y_bottom": int(ryb), "y_top": int(ryt), "height_cm": float(rh)} if use_ruler else None
+        def _cb(frame):
+            im = frame.to_ndarray(format="bgr24"); im = fit(im)
+            res, m = jd.analyze_image(im, live_ruler, conf_seg, conf_det); vis = jd.draw(im, m, res, live_ruler)
+            wf = res["water_fraction"] * 100; txt = f"water {wf:.0f}%"
+            if res.get("vehicle_depth_cm") is not None: txt += f"  ·  ~{res['vehicle_depth_cm']:.0f} cm {res['vehicle_class']}"
+            if "ruler" in res: txt += f"  ·  ruler {res['ruler']['depth_cm']:.0f} cm {res['ruler']['class']}"
+            if res["flags"]: txt += "  ·  ⚠ " + "; ".join(res["flags"])
+            cv2.rectangle(vis, (0, 0), (vis.shape[1], 30), (27, 58, 107), -1); cv2.putText(vis, txt, (10, 21), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+            return _av.VideoFrame.from_ndarray(vis, format="bgr24")
+        webrtc_streamer(key="jaldepth-live", mode=WebRtcMode.SENDRECV, video_frame_callback=_cb, media_stream_constraints={"video": {"width": {"ideal": 1280}}, "audio": False},
+                        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}, async_processing=True)
+        st.caption("Tip: the ruler sliders in the sidebar apply live — line the white box up with a kerb or pole and set its height.")
+    except Exception as e:
+        st.error(f"Continuous mode needs the optional packages streamlit-webrtc and av ({e}). Use the snapshot mode instead.")
 else:
     up = st.file_uploader("Short video (mp4/mov, ≤200 MB)", type=["mp4", "mov", "m4v"])
     if up:
@@ -86,6 +110,6 @@ if img is not None:
 
 Limits: night, glare and muddy reflections lower the mask quality; depth without a ruler is indicative. In JalDrishti this module runs on existing CCTV and feeds a self-correcting flood nowcast.
 """)
-else:
-    st.info("Pick a sample on the left, or upload a photo / video.")
+elif src != "Live camera — continuous":
+    st.info("Pick a sample on the left, upload a photo / video, or use your camera.")
 st.caption("Sample photos: Wikimedia Commons, CC BY-SA / public domain — see samples/ATTRIBUTION.md. Dataset: ATLANTIS (Erfani et al., Environmental Modelling & Software, 2022).")

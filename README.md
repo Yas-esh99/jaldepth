@@ -1,6 +1,6 @@
 # 💧 JalDepth — how deep is the water on this street?
 
-A small, self-contained computer-vision demo: give it a photo or a short video of a flooded street and it tells you **where the water is**, **who and what is standing in it**, and **how deep it is** as a class a driver understands — **Dry · Ankle · Knee · Wheel**.
+A small, self-contained computer-vision demo: give it a photo, a short video, or your **live camera** pointed at a flooded street and it tells you **where the water is**, **who and what is standing in it**, and **how deep it is** as a class a driver understands — **Dry · Ankle · Knee · Wheel**.
 
 It is the vision module of **JalDrishti**, our Smart India Hackathon 2026 project (PS SIH26085, *Urban Flood Nowcasting System — Drainage and Rainfall Coupling*), packaged on its own so it can be shown and tried in one click.
 
@@ -17,6 +17,10 @@ It is the vision module of **JalDrishti**, our Smart India Hackathon 2026 projec
 | **Flags** | *Person standing in water* · *Vehicle in wheel-deep water* | Rules |
 
 **Indian test set.** 38 freely licensed photos of flooded streets in Mumbai, Chennai, Vadodara, Ahmedabad and Bengaluru from Wikimedia Commons (`samples/`, credits in `samples/ATTRIBUTION.md`) plus a 2017 Mumbai flood video. The model finds water in 34 of the 38 photos (mean coverage 35%) and flags people and vehicles in water correctly on the Mumbai and Chennai scenes. There is no public street-level *Indian* flood segmentation dataset yet — the open Indian sets are satellite imagery — so we train on the global ATLANTIS set and validate on Indian streets; collecting and labelling an Indian street set is the next step.
+
+## Live camera
+
+Two modes in the sidebar: **Live camera — snapshot** uses the browser camera (laptop or phone) and analyses one picture at a time; **Live camera — continuous** streams the webcam through WebRTC and draws the water mask, boxes and depth class on every frame (the ruler sliders apply live). Continuous mode is smooth on a laptop; on a hosted server the video is relayed through the browser and may lag.
 
 ## Run locally
 
