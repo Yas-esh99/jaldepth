@@ -79,7 +79,7 @@ if img is not None:
         if not res["flags"]: st.caption("No emergency flags.")
     with st.expander("How it works"):
         st.markdown(f"""
-1. **Water segmentation** — a YOLOv8n-seg network we fine-tuned on **ATLANTIS** (Erfani et al. 2022; 5,195 Creative-Commons photos, 17 waterbody labels merged into *water*). Test mask mAP50 = {metrics['test_mask_mAP50']:.2f}, mAP50-95 = {metrics['test_mask_mAP50_95']:.2f}. Orange overlay = water.
+1. **Water segmentation** — a YOLOv8n-seg network we fine-tuned on **ATLANTIS** (Erfani et al. 2022; 5,195 Creative-Commons photos, 17 waterbody labels merged into *water*). Test mask mAP50 = {metrics['test_mask_mAP50']:.2f}, mAP50-95 = {metrics['test_mask_mAP50_95']:.2f}. Blue overlay = water.
 2. **Object detection** — pretrained YOLOv8n (COCO) finds people, cars, buses, trucks, motorcycles. A box whose base lies inside the water mask is *standing in water*.
 3. **Depth** — two ways. *Coarse:* the fraction of a vehicle hidden below the waterline × its typical height. *Exact:* mark a reference of known height (kerb ≈ 15 cm, pole bands, wall) and the waterline on it is converted to centimetres.
 4. **Classes** — Dry < 5 cm · Ankle 5–20 · Knee 20–50 · Wheel > 50 cm. Classes, not false precision: that is what a driver or a control room needs.
