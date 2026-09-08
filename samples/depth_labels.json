@@ -1,0 +1,230 @@
+[
+ {
+  "file": "1_1_Water_logged_street_in_front_of_the_home_during_floods_a.jpg",
+  "depth_cm": 3,
+  "class": "Dry",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "2_1_Vehicles_immersed_in_water_logged_street_in_front_of_the.jpg",
+  "depth_cm": 15,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "A_Santro_that_went_off_road_35520266_jpg.jpg",
+  "depth_cm": 10,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "A_still_of_the_flood_affected_areas_in_Gujarat_on_July_3_200.jpg",
+  "depth_cm": 30,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Aadhaar_Bangalore_flood_jpg.jpg",
+  "depth_cm": 8,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Ahemdabad_jpg.jpg",
+  "depth_cm": 40,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Army_flood_relief_and_rescue_operations_in_Chennai_on_Novemb.jpg",
+  "depth_cm": 100,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Bangalore_monsoon_jpg.jpg",
+  "depth_cm": 60,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Bombay_flooded_street2_jpg.jpg",
+  "depth_cm": 10,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Bombay_flooded_street_jpg.jpg",
+  "depth_cm": 30,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Chennai_flood_water_logging_near_ofice_nandanam4_jpg.jpg",
+  "depth_cm": 35,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Chennai_flood_water_logging_near_ofice_nandanam5_jpg.jpg",
+  "depth_cm": 25,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Chennai_flood_water_logging_near_ofice_nandanam6_jpg.jpg",
+  "depth_cm": 35,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Chennai_floods_2015_dec_7_jpg.jpg",
+  "depth_cm": 80,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Chennai_floods_Dec_2005_jpg.jpg",
+  "depth_cm": 40,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Flood_1_jpg.jpg",
+  "depth_cm": 60,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Flood_2006_jpg.jpg",
+  "depth_cm": 100,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Flooded_Marina_beach_Near_Service_Road_2015_jpg.jpg",
+  "depth_cm": 100,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Flooding_Cyclone_Nivar_House_Uthandi_Chennai_Nov21_D72_21329.jpg",
+  "depth_cm": 0,
+  "class": "Dry",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Flooding_in_Mumbai_India_2017_jpg.jpg",
+  "depth_cm": 30,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_02_3059047958_jpg.jpg",
+  "depth_cm": 12,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_03_3058213357_jpg.jpg",
+  "depth_cm": 18,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_04_3058215637_jpg.jpg",
+  "depth_cm": 15,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_05_3058218683_jpg.jpg",
+  "depth_cm": 35,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_07_3059060932_jpg.jpg",
+  "depth_cm": 20,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_08_3059063220_jpg.jpg",
+  "depth_cm": 10,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_09_3058285493_jpg.jpg",
+  "depth_cm": 8,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "India_Chennai_Monsoon_10_3058291559_jpg.jpg",
+  "depth_cm": 12,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_1_jpg.jpg",
+  "depth_cm": 55,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_2_jpg.jpg",
+  "depth_cm": 15,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_3_jpg.jpg",
+  "depth_cm": 30,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_4_jpg.jpg",
+  "depth_cm": 25,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_5_jpg.jpg",
+  "depth_cm": 80,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_6_jpg.jpg",
+  "depth_cm": 10,
+  "class": "Ankle-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Inundation_of_Chennai_in_2017_7_jpg.jpg",
+  "depth_cm": 40,
+  "class": "Knee-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Monsoon_36877269620_jpg.jpg",
+  "depth_cm": 100,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Mumbai_India_27674519391_jpg.jpg",
+  "depth_cm": 0,
+  "class": "Dry",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ },
+ {
+  "file": "Rain_in_india_panoramio_jpg.jpg",
+  "depth_cm": 100,
+  "class": "Wheel-deep",
+  "note": "visual judgement by the JalDrishti team, not a measurement"
+ }
+]

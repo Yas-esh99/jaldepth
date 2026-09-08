@@ -1,0 +1,7 @@
+{
+ "n_images": 38,
+ "labels": "visual judgement by the team (class + rough cm), not measured",
+ "class_accuracy": 0.395,
+ "within_one_class": 0.816,
+ "mae_cm": 26.6
+}

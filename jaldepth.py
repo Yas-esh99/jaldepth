@@ -10,6 +10,7 @@ CLASSES = [("Dry", 5, (46, 139, 87)), ("Ankle-deep", 20, (48, 194, 242)), ("Knee
 REF = {"person": (170, 45, 45), "car": (150, 180, 450), "truck": (300, 250, 800), "bus": (320, 250, 1200), "motorcycle": (110, 60, 210), "bicycle": (100, 45, 175),
        "fire hydrant": (75, 30, 30), "bench": (45, 150, 150), "stop sign": (210, 75, 75), "dog": (55, 25, 80), "cow": (140, 60, 220)}
 VEHICLES = {"car", "truck", "bus", "motorcycle", "bicycle"}
+OBJ_CAL = 0.6   # empirical: object-based estimates ran ~40% high on 38 labelled Indian photos (people/vehicles are rarely fully visible)
 
 def depth_class(cm: float):
     for name, upper, col in CLASSES:
@@ -74,7 +75,7 @@ def object_depth(d, mask, scale=1.0):
         if col.any(): frac = (len(col) - int(np.argmax(col))) / len(col)     # part of the box below the water top
     overlap = frac * H
     est = max(sub, overlap * 0.6) if sub > 0 else overlap
-    est = float(np.clip(est, 0, 0.8 * H))          # a box rarely shows the full object; cap to avoid over-estimates
+    est = float(np.clip(est, 0, 0.8 * H)) * OBJ_CAL   # cap + empirical calibration (see OBJ_CAL)
     return est if (est > 0 or frac > 0) else 0.0
 
 def ruler_depth(mask, x, y_bottom, y_top, height_cm, band=10):
@@ -90,12 +91,13 @@ def ruler_depth(mask, x, y_bottom, y_top, height_cm, band=10):
     return {"depth_cm": round(cm, 1), "waterline_y": int(y_bottom - y), "solidity": round(solidity, 2), "class": depth_class(cm)[0]}
 
 def scene_depth(mask, scale=1.0):
-    """No reference in view: estimate from how much of the lower half of the frame is water and how high the water reaches.
-    Calibrated to the class thresholds; low confidence by design."""
+    """No reference in view. A monocular image cannot tell how deep a sheet of water is, and on CCTV the common case is a
+    shallow sheet, so the default is conservative: 'surface water, likely under 10 cm'. Only very extensive water reaching high
+    into the frame nudges the estimate toward ankle-deep. Never claims knee-deep without a reference."""
     h = mask.shape[0]; lower = (mask[h // 2:] > 0).mean(); rows = np.where((mask > 0).mean(axis=1) > 0.3)[0]
-    reach = 1 - rows.min() / h if rows.size else 0.0                          # 0 = no water, 1 = water to the top
+    reach = 1 - rows.min() / h if rows.size else 0.0
     score = 0.65 * lower + 0.35 * reach
-    cm = float(np.interp(score, [0, 0.08, 0.3, 0.55, 0.8], [0, 5, 15, 28, 40])) * scale   # no reference in view: never claim more than knee-deep
+    cm = float(np.interp(score, [0, 0.05, 0.4, 0.9], [0, 3, 8, 15])) * scale
     return cm
 
 def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", toy_len_cm=7.0):
@@ -112,7 +114,7 @@ def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", 
         if objs:
             depth = float(np.percentile(objs, 35)); conf = 0.55 + 0.1 * min(3, len(objs) - 1); method = f"{len(objs)} known-size object(s) in water"
         else:
-            depth = scene_depth(mask, scale); conf = 0.3; method = "scene estimate (no reference in view)"
+            depth = scene_depth(mask, scale); conf = 0.3; method = "surface-water estimate, no reference in view (mark a kerb or wait for a person/vehicle for a real reading)"
     real_cm = depth if ruler else (depth / scale if scale != 1.0 else depth)   # ruler height is entered in real-world cm
     out["depth"] = {"cm": round(depth, 1), "real_cm": round(real_cm, 1), "class": depth_class(real_cm)[0], "confidence": round(conf, 2), "method": method}
     flags = []
