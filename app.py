@@ -55,7 +55,7 @@ else:
                 res, m = jd.analyze_image(fit(fr), None, conf_seg, conf_det)
                 rows.append({"t (s)": round(k / fps, 1), "water %": round(res["water_fraction"] * 100), "people": sum(d["name"] == "person" for d in res["detections"]), "vehicles": sum(d["name"] in jd.VEHICLES for d in res["detections"]), "vehicle depth (cm)": res.get("vehicle_depth_cm"), "flags": ", ".join(res["flags"])})
                 prog.progress(min(1.0, (k + fps) / n))
-            st.dataframe(rows, use_container_width=True)
+            st.dataframe(rows, width='stretch')
 
 if img is not None:
     ruler = {"x": int(rx * img.shape[1] / 1280), "y_bottom": int(ryb * img.shape[0] / 720), "y_top": int(ryt * img.shape[0] / 720), "height_cm": float(rh)} if use_ruler else None
@@ -63,7 +63,7 @@ if img is not None:
         res, mask = jd.analyze_image(img, ruler, conf_seg, conf_det); vis = jd.draw(img, mask, res, ruler)
     c1, c2 = st.columns([3, 2])
     with c1:
-        st.image(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB), caption=caption, use_container_width=True)
+        st.image(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB), caption=caption, width='stretch')
     with c2:
         wf = res["water_fraction"] * 100
         st.markdown(f'<div class="card"><div class="lbl">Water coverage (segmentation model)</div><p class="big">{wf:.0f}%</p></div>', unsafe_allow_html=True); st.write("")
