@@ -35,9 +35,14 @@ def water_mask(img, conf=0.25, tinted=False):
     """Indian-adapted model first; if it finds almost nothing, fall back to the ATLANTIS model (they miss different scenes)."""
     mods = load_models()
     m = _mask_from(mods["water_in"], img, conf) if mods.get("water_in") else _mask_from(mods["water"], img, conf)
-    if mods.get("water_in") and (m > 0).mean() < 0.03:
-        m2 = _mask_from(mods["water"], img, conf)
-        if (m2 > 0).mean() > (m > 0).mean(): m = m2
+    if (m > 0).mean() < 0.03:
+        cands = []
+        if mods.get("water_in"): cands.append(_mask_from(mods["water"], img, conf))
+        small = cv2.resize(img, (img.shape[1] * 3 // 4, img.shape[0] * 3 // 4))          # second pass at 75% scale: the models are scale-sensitive on some scenes
+        for mod in ([mods["water_in"]] if mods.get("water_in") else []) + [mods["water"]]:
+            cands.append(cv2.resize(_mask_from(mod, small, conf), (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST))
+        best = max(cands, key=lambda c: (c > 0).mean()) if cands else m
+        if (best > 0).mean() > (m > 0).mean(): m = best
     if tinted:   # table-top rig: union with a blue-tint mask (food colouring in the tray)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV); hm = cv2.inRange(hsv, np.array([85, 50, 40]), np.array([135, 255, 255]))
         k = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)); hm = cv2.morphologyEx(cv2.morphologyEx(hm, cv2.MORPH_OPEN, k), cv2.MORPH_CLOSE, k); m = cv2.bitwise_or(m, hm)
