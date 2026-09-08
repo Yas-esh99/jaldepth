@@ -1,0 +1,12 @@
+{
+ "epochs": 20,
+ "imgsz": 512,
+ "train_images": 3364,
+ "val_images": 535,
+ "test_images": 1296,
+ "dataset": "ATLANTIS (Erfani et al. 2022), 17 waterbody labels merged into 'water'",
+ "test_mask_mAP50": 0.5804,
+ "test_mask_mAP50_95": 0.3817,
+ "test_box_mAP50": 0.5989,
+ "train_minutes": 538.0
+}
