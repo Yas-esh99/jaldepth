@@ -33,7 +33,7 @@ First run downloads nothing: both models are in `models/` (≈13 MB). CPU is eno
 **Streamlit Community Cloud** (recommended — runs Python + OpenCV + PyTorch):
 1. Push this folder to GitHub (public repo).
 2. Go to https://share.streamlit.io → *New app* → pick the repo, branch `main`, file `app.py` → Deploy.
-3. Done; the URL is `https://<app-name>.streamlit.app`. `packages.txt` and `requirements.txt` are already set up.
+3. Done; the URL is `https://<app-name>.streamlit.app`. `requirements.txt` is already set up (no apt packages needed: OpenCV headless wheel).
 
 Vercel is not suitable for this app: its serverless functions cannot run PyTorch/OpenCV inference within their size and time limits.
 
