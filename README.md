@@ -23,6 +23,10 @@ We labelled the 38 Indian photos by eye with a depth class and rough centimetres
 
 No open Indian CCTV flood image set exists; the Wikimedia photos are the closest licensed substitute, and the app is built to be tested on your own CCTV frames (upload a photo or video).
 
+## Our demo tray (kerb + toy car, no ruler) — the school / SIH rig
+
+Sidebar → Scene → **Demo tray — kerb + toy car**. The striped foam kerb stands for a real 15 cm kerb and the toy tyre for 60 cm, exactly as in the build guide. Calibrate once with two sliders (drag the green lines onto the road/floor and the top of the kerb), pick the x-range of wall/kerb where the waterline is visible, and add a few drops of **blue food colouring** to the water. The app reads the waterline on the wall, converts it to real-world centimetres via the kerb, and reports the class with the action from the guide: **Dry** (kerb visible) · **Ankle** (< 15 cm, kerb partly covered · pre-alert) · **Knee** (15–60 cm, tyre partly submerged · alert, deploy pump) · **Wheel** (> 60 cm, tyre fully submerged · close road). Untinted water: choose *Compare with empty-box reference*, capture the empty box once, then pour. Use **Live camera — continuous** on the laptop for the stage.
+
 ## Glass-tank demo (side view, no ruler needed)
 
 Point the camera through the glass at a tank with a road bed and a die-cast car. Choose **Glass tank — side view** and enter two numbers: the model car's length (≈24 cm for a 1:18 Golf) and the real car's length (430 cm). The car is the ruler: its detected length gives pixels-per-centimetre and its tyres define the floor; the water surface is found as a long horizontal edge (segmentation mask + edge detector). You get depth in the tank to the pixel, the real-world equivalent at that scale, the class, and how much of the car is under water. If the car is briefly hidden, the last good calibration is kept; a manual two-line fallback exists but is not needed. Verified on synthetic tank frames: 0.0 cm error at 3, 6.5, 10 and 14 cm.
