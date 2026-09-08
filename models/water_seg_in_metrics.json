@@ -1,0 +1,12 @@
+{
+ "stage": "2 \u2014 self-trained on Indian street footage",
+ "base": "yolov8n-seg-water.pt (ATLANTIS)",
+ "indian_pseudo_labelled_images": 27,
+ "epochs": 8,
+ "imgsz": 512,
+ "test_mask_mAP50": 0.5799,
+ "test_mask_mAP50_95": 0.3766,
+ "indian_photos_with_water_before": "34/38",
+ "indian_photos_with_water_after": "34/38",
+ "train_minutes": 18.0
+}

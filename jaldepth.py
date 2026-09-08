@@ -4,7 +4,7 @@ Scenes: 'street' (real CCTV / photos) or 'rig' (table-top tray with a toy car, t
 import os, json
 import numpy as np, cv2
 HERE = os.path.dirname(os.path.abspath(__file__))
-WATER_W = os.path.join(HERE, "models", "yolov8n-seg-water.pt"); DET_W = os.path.join(HERE, "models", "yolov8n.pt")
+WATER_W = os.path.join(HERE, "models", "yolov8n-seg-water.pt"); WATER_IN_W = os.path.join(HERE, "models", "yolov8n-seg-water-in.pt"); DET_W = os.path.join(HERE, "models", "yolov8n.pt")
 CLASSES = [("Dry", 5, (46, 139, 87)), ("Ankle-deep", 20, (48, 194, 242)), ("Knee-deep", 50, (31, 123, 224)), ("Wheel-deep", 1e9, (43, 57, 192))]
 # typical real-world sizes in cm: (height, width when seen frontally, length when seen from the side)
 REF = {"person": (170, 45, 45), "car": (150, 180, 450), "truck": (300, 250, 800), "bus": (320, 250, 1200), "motorcycle": (110, 60, 210), "bicycle": (100, 45, 175),
@@ -21,14 +21,23 @@ def load_models():
     if not _models:
         from ultralytics import YOLO
         _models["water"] = YOLO(WATER_W); _models["det"] = YOLO(DET_W)
+        _models["water_in"] = YOLO(WATER_IN_W) if os.path.exists(WATER_IN_W) else None   # stage 2: self-trained on Indian footage
     return _models
 
-def water_mask(img, conf=0.25, tinted=False):
-    res = load_models()["water"].predict(img, conf=conf, verbose=False, imgsz=640)[0]
-    m = np.zeros(img.shape[:2], np.uint8)
+def _mask_from(model, img, conf):
+    res = model.predict(img, conf=conf, verbose=False, imgsz=640)[0]; m = np.zeros(img.shape[:2], np.uint8)
     if res.masks is not None:
         for poly in res.masks.xy:
             if len(poly) >= 3: cv2.fillPoly(m, [poly.astype(np.int32)], 255)
+    return m
+
+def water_mask(img, conf=0.25, tinted=False):
+    """Indian-adapted model first; if it finds almost nothing, fall back to the ATLANTIS model (they miss different scenes)."""
+    mods = load_models()
+    m = _mask_from(mods["water_in"], img, conf) if mods.get("water_in") else _mask_from(mods["water"], img, conf)
+    if mods.get("water_in") and (m > 0).mean() < 0.03:
+        m2 = _mask_from(mods["water"], img, conf)
+        if (m2 > 0).mean() > (m > 0).mean(): m = m2
     if tinted:   # table-top rig: union with a blue-tint mask (food colouring in the tray)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV); hm = cv2.inRange(hsv, np.array([85, 50, 40]), np.array([135, 255, 255]))
         k = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)); hm = cv2.morphologyEx(cv2.morphologyEx(hm, cv2.MORPH_OPEN, k), cv2.MORPH_CLOSE, k); m = cv2.bitwise_or(m, hm)
