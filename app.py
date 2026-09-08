@@ -28,6 +28,9 @@ with st.sidebar:
         b_x0, b_x1 = st.slider("Measure across x-range (%)", 0, 100, (10, 90), help="Front wall / kerb face where the waterline is visible; avoid the pole and clutter.")
         b_kerb_cm = st.number_input("Kerb represents (cm)", 5.0, 50.0, 15.0, 1.0); b_tyre_cm = st.number_input("Tyre represents (cm)", 20.0, 120.0, 60.0, 5.0)
         b_mode = st.radio("Water detection", ["Blue-tinted water", "Compare with empty-box reference"], index=0); b_sens = st.slider("Sensitivity (fraction of row that must be water)", 0.2, 0.8, 0.45, 0.05)
+        st.divider(); st.markdown("**Prediction module (sample rainfall)**")
+        b_rain = st.slider("Forecast rainfall (mm/h)", 0, 120, 30, 5); b_drain = st.selectbox("Drainage state", ["normal", "blocked", "good"], index=0)
+        st.session_state.setdefault("alerts", [])
         if b_mode.startswith("Compare"):
             if st.button("📷 Capture empty-box reference now"): tr._ref["capture"] = True; st.success("Next frame/image will be stored as the empty reference.")
             st.caption(f"Reference stored: {'yes' if tr._ref.get('frame') is not None else 'no'}")
@@ -79,6 +82,7 @@ elif src == "Live camera — continuous":
             if box_cfg:
                 fl, kb, x0p, x1p, kcm, tcm, md, sens = box_cfg; H_, W_ = im.shape[:2]; ref = tr.maybe_capture_ref(im)
                 bres = tr.analyze_box(im, (x0p / 100 * W_, x1p / 100 * W_), fl / 100 * H_, kb / 100 * H_, kcm, md, ref, tcm, min_frac=sens); vis = tr.draw_box(im, bres, kcm)
+                import time as _t; tr._live["box"] = bres; tr._live["ts"] = _t.time()
             elif tank_cfg:
                 x0p, x1p, topp, clen, rlen, man = tank_cfg; H_, W_ = im.shape[:2]; roi = (int(x0p / 100 * W_), int(topp / 100 * H_), int(x1p / 100 * W_), int(0.95 * H_))
                 manual = {"y_floor": man["y_floor"] * H_, "y_mark": man["y_mark"] * H_, "mark_cm": man["mark_cm"]} if man else None
@@ -115,6 +119,33 @@ else:
                 rows.append({"t (s)": round(k / fps, 1), "water %": round(res["water_fraction"] * 100), "people": sum(d["name"] == "person" for d in res["detections"]), "vehicles": sum(d["name"] in jd.VEHICLES for d in res["detections"]), "depth (cm)": res["depth"]["real_cm"], "class": res["depth"]["class"], "confidence": res["depth"]["confidence"], "flags": ", ".join(res["flags"])})
                 prog.progress(min(1.0, (k + fps) / n))
             st.dataframe(rows, width='stretch')
+
+def fusion_panel(observed_res, live=False):
+    """Blueprint loop: Predicted (rainfall) -> Observed (camera) -> Fusion -> Corrected nowcast -> Actions -> Alert log."""
+    import time as _t
+    pred = tr.predict_from_rain(b_rain, b_drain)
+    if observed_res is None:
+        st.info("Waiting for a camera reading…"); return
+    obs, conf = observed_res["class"], observed_res["confidence"]; corrected, rule = tr.fuse(pred, obs, conf)
+    cols = st.columns(3); col_of = lambda n: "#%02x%02x%02x" % tuple(reversed(tr.box_class(0 if n == "Dry" else 10 if n == "Ankle-deep" else 30 if n == "Knee-deep" else 80)[3]))
+    for c, (lbl, val) in zip(cols, [("Predicted level (rainfall model)", pred), ("Observed CCTV level", obs), ("Corrected nowcast", corrected)]):
+        c.markdown(f'<div class="card"><div class="lbl">{lbl}</div><p class="big" style="font-size:30px;color:{col_of(val)}">{val.upper()}</p></div>', unsafe_allow_html=True)
+    st.caption(f"Fusion rule: {rule} · observation confidence {conf:.2f} · forecast {b_rain} mm/h, drainage {b_drain} · real depth {observed_res['real_cm']:.0f} cm")
+    acts = tr.ACTIONS[corrected]
+    if corrected in ("Knee-deep", "Wheel-deep"):
+        st.markdown('<div class="flag">🚨 ' + " · ".join(acts) + '</div>', unsafe_allow_html=True)
+        log = st.session_state.alerts
+        if not log or log[-1]["level"] != corrected: log.append({"time": _t.strftime("%H:%M:%S"), "level": corrected, "observed": obs, "predicted": pred, "depth_cm": observed_res["real_cm"], "action": acts[0]})
+    else:
+        st.markdown('<div class="card">✅ ' + " · ".join(acts) + '</div>', unsafe_allow_html=True)
+    if st.session_state.alerts:
+        st.markdown("**Alert log**"); st.dataframe(list(reversed(st.session_state.alerts))[:8], width='stretch', hide_index=True)
+
+if scene == "box" and src == "Live camera — continuous":
+    @st.fragment(run_every=1.0)
+    def _live_panel():
+        b = tr._live.get("box"); fusion_panel(b, live=True)
+    st.subheader("Closed loop: prediction → observation → fusion → alert"); _live_panel()
 
 if img is not None:
     ruler = {"x": int(rx * img.shape[1] / 1280), "y_bottom": int(ryb * img.shape[0] / 720), "y_top": int(ryt * img.shape[0] / 720), "height_cm": float(rh)} if use_ruler else None
@@ -154,8 +185,11 @@ if img is not None:
             st.markdown(f'<div class="card"><div class="lbl">Water coverage (segmentation model)</div><p class="big">{wf:.0f}%</p></div>', unsafe_allow_html=True); st.write("")
         n_p = sum(d["name"] == "person" for d in res["detections"]); n_v = sum(d["name"] in jd.VEHICLES for d in res["detections"]); n_w = sum(d["in_water"] for d in res["detections"])
         if "box" not in res and "tank" not in res: st.markdown(f'<div class="card"><div class="lbl">Reference objects</div><b>{n_p}</b> people · <b>{n_v}</b> vehicles · <b>{n_w}</b> standing in water (used for depth)</div>', unsafe_allow_html=True); st.write("")
-        for f in res["flags"]: st.markdown(f'<div class="flag">⚠ {f}</div>', unsafe_allow_html=True)
-        if not res["flags"]: st.caption("No emergency flags.")
+        if "box" not in res:
+            for f in res["flags"]: st.markdown(f'<div class="flag">⚠ {f}</div>', unsafe_allow_html=True)
+            if not res["flags"]: st.caption("No emergency flags.")
+    if "box" in res:
+        st.subheader("Closed loop: prediction → observation → fusion → alert"); fusion_panel(res["box"])
     with st.expander("How it works"):
         st.markdown(f"""
 1. **Water segmentation** — a YOLOv8n-seg network we fine-tuned on **ATLANTIS** (Erfani et al. 2022; 5,195 Creative-Commons photos, 17 waterbody labels merged into *water*). Test mask mAP50 = {metrics['test_mask_mAP50']:.2f}, mAP50-95 = {metrics['test_mask_mAP50_95']:.2f}. Blue overlay = water.

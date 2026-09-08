@@ -170,3 +170,23 @@ _ref = {"frame": None, "capture": False}
 def maybe_capture_ref(img):
     if _ref.get("capture"): _ref["frame"] = img.copy(); _ref["capture"] = False
     return _ref.get("frame")
+
+_live = {"box": None, "ts": 0.0}     # latest tray reading from the live-camera callback (read by the dashboard fragment)
+ORDER = {"Dry": 0, "Ankle-deep": 1, "Knee-deep": 2, "Wheel-deep": 3}; NAMES = ["Dry", "Ankle-deep", "Knee-deep", "Wheel-deep"]
+def predict_from_rain(mm_h, drainage="normal"):
+    """Sample prediction module: rainfall intensity -> expected street water level (simple runoff table; blocked drains shift one class up)."""
+    lvl = 0 if mm_h < 15 else 1 if mm_h < 40 else 2 if mm_h < 70 else 3
+    if drainage == "blocked": lvl = min(3, lvl + 1)
+    if drainage == "good": lvl = max(0, lvl - 1)
+    return NAMES[lvl]
+def fuse(predicted, observed, obs_conf):
+    """Fusion rule from the blueprint: a confident camera observation overrides the prediction; when the camera sees much less than
+    predicted, the nowcast is corrected down one step (the model over-predicted)."""
+    p, o = ORDER[predicted], ORDER[observed]
+    if obs_conf < 0.5: return predicted, "observation unreliable — prediction kept"
+    if o >= p: return observed, "observed ≥ predicted → observation overrides"
+    if p - o >= 2: return NAMES[p - 1], "observed ≪ predicted → nowcast corrected down one step"
+    return observed, "observed slightly below predicted → observation used"
+ACTIONS = {"Dry": ["No action — monitor only"], "Ankle-deep": ["Pre-alert to control room", "Monitor closely, prepare pumps"],
+           "Knee-deep": ["Deploy high-capacity drainage pump", "Advise caution; warn two-wheelers", "WhatsApp advisory to subscribers"],
+           "Wheel-deep": ["Close the road; trigger traffic diversion", "Alert police and disaster response", "Broadcast WhatsApp alert with alternative route"]}
