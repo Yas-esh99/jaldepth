@@ -81,7 +81,7 @@ def scene_depth(mask, scale=1.0):
     h = mask.shape[0]; lower = (mask[h // 2:] > 0).mean(); rows = np.where((mask > 0).mean(axis=1) > 0.3)[0]
     reach = 1 - rows.min() / h if rows.size else 0.0                          # 0 = no water, 1 = water to the top
     score = 0.65 * lower + 0.35 * reach
-    cm = float(np.interp(score, [0, 0.08, 0.3, 0.55, 0.8], [0, 5, 15, 30, 50])) * scale
+    cm = float(np.interp(score, [0, 0.08, 0.3, 0.55, 0.8], [0, 5, 15, 28, 40])) * scale   # no reference in view: never claim more than knee-deep
     return cm
 
 def analyze_image(img, ruler=None, conf_seg=0.25, conf_det=0.3, scene="street", toy_len_cm=7.0):
